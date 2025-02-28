@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import pickle as cPickle
 from tqdm import tqdm
 
-
 def setup_logger(logger_name, log_file, level=logging.INFO):
     logger = logging.getLogger(logger_name)
     formatter = logging.Formatter('%(asctime)s : %(message)s')
