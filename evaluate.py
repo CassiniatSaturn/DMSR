@@ -158,9 +158,6 @@ def detect():
     img_count = 0
     t_start = time.time()
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
-
-        if img_id >= 5:
-            break
         img_path = os.path.join(opt.data_dir, path)
         raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
         raw_rgb = raw_rgb[:, :, ::-1]
