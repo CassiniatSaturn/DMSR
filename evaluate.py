@@ -27,11 +27,10 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
     "--corruption",
-    type=int,
-    default=2,
-    help="-1: no corruption, 0-18: select corruption",
+    type=str,
+    default="",
+    help="no corrpution:'', else: ['gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur', 'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog', 'brightness', 'contrast', 'elastic_transform', 'pixelate', 'jpeg_compression', 'speckle_noise', 'gaussian_blur', 'spatter', 'saturate']",
 )
-
 
 parser.add_argument(
     "--use_gt", type=int, default=0, help="use GT mask as detection results"
@@ -47,13 +46,13 @@ parser.add_argument(
 parser.add_argument(
     "--model",
     type=str,
-    default="./pretrained/camera_model.pth",
+    default="./pretrained/real_model.pth",
     help="resume from saved model",
 )
 parser.add_argument(
     "--result_dir",
     type=str,
-    default="./results/real_dpt",
+    default="./results/speckle_noise",
     help="result directory",
 )
 parser.add_argument("--gpu", type=str, default="1", help="GPU to use")
@@ -79,8 +78,8 @@ opt = parser.parse_args()
 
 def detect():
     # total 19 corruptions
-    image_corruptions = get_corruption_names("all")
 
+    print("test", len(opt.corruption) == 0)
     os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu
 
     assert opt.data in ["val", "real_test"]
@@ -97,11 +96,6 @@ def detect():
     K[0, 2] = cam_cx
     K[1, 2] = cam_cy
 
-    if opt.corruption != -1:
-        opt.result_dir = "./results/real_corruption/{}".format(
-            image_corruptions[opt.corruption]
-        )
-
     result_dir = opt.result_dir
     result_img_dir = os.path.join(result_dir, "images")
     if not os.path.exists(result_dir):
@@ -111,7 +105,12 @@ def detect():
     if opt.use_gt:
         dpt_dir = "/share_chairilg/data/REAL275/dpt_output/gt_detection"
     else:
-        dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
+        if len(opt.corruption) == 0:
+            dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
+        else:
+            dpt_dir = "/share_chairilg/data/REAL275/dpt_output/{}".format(
+                opt.corruption
+            )
 
     # path for shape & scale prior
     mean_shapes = np.load("assets/mean_points_emb.npy")
@@ -159,29 +158,22 @@ def detect():
     t_start = time.time()
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
         img_path = os.path.join(opt.data_dir, path)
-        raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
+
+        if len(opt.corruption) != 0:
+            tmp_path = path.split("/")[1:]
+            tmp_path = "/".join(tmp_path)
+            tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
+            raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
+        else:
+            raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
+
         raw_rgb = raw_rgb[:, :, ::-1]
         raw_depth = load_depth(img_path)
 
-        if opt.corruption != -1:
-            rgb = Image.fromarray(np.uint8(raw_rgb))
-            rgb = np.array(rgb)
-            corrupted = corrupt(
-                rgb, corruption_name=get_corruption_names("all")[opt.corruption]
-            )
-            raw_rgb = corrupted
-
         # load mask-rcnn detection results
         img_path_parsing = img_path.split("/")
-        # Change to DualPose for the mask-rcnn results
-        if opt.data == "real_test":
-            mrcnn_key = "REAL275"
-        else:
-            mrcnn_key = "CAMERA25"
 
         mrcnn_path = os.path.join(
-            # f"/share_chairilg/data/REAL275/dualpose_segmentation/segmentation_results_refine_for_mug/{mrcnn_key}",
-            # f"/share_chairilg/data/REAL275/dualpose_segmentation/segmentation_results/{mrcnn_key}",
             f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
             "results_{}_{}_{}.pkl".format(
                 opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
@@ -357,20 +349,20 @@ def detect():
             cPickle.dump(result, f)
 
         # draw estimation results on images
-        draw_detections(
-            raw_rgb[:, :, ::-1].copy(),
-            result_img_dir,
-            "images",
-            img_id,
-            K,
-            result["pred_RTs"],
-            result["pred_scales"],
-            result["pred_class_ids"],
-            result["gt_RTs"],
-            result["gt_scales"],
-            result["gt_class_ids"],
-            draw_gt=True,
-        )
+        # draw_detections(
+        #     raw_rgb[:, :, ::-1].copy(),
+        #     result_img_dir,
+        #     "images",
+        #     img_id,
+        #     K,
+        #     result["pred_RTs"],
+        #     result["pred_scales"],
+        #     result["pred_class_ids"],
+        #     result["gt_RTs"],
+        #     result["gt_scales"],
+        #     result["gt_class_ids"],
+        #     draw_gt=True,
+        # )
 
     # write statistics
     fw = open("{0}/eval_logs.txt".format(result_dir), "w")

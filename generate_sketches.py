@@ -23,9 +23,14 @@ print(torch.cuda.is_available())
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "--use_gt", type=int, default=1, help="use GT mask as detection results"
+    "--use_gt", type=int, default=0, help="use GT mask as detection results"
 )
-
+parser.add_argument(
+    "--corruption",
+    type=str,
+    default="speckle_noise",
+    help="['gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur', 'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog', 'brightness', 'contrast', 'elastic_transform', 'pixelate', 'jpeg_compression', 'speckle_noise', 'gaussian_blur', 'spatter', 'saturate']",
+)
 parser.add_argument("--data", type=str, default="real_test", help="val, real_test")
 parser.add_argument(
     "--data_dir",
@@ -34,33 +39,12 @@ parser.add_argument(
     help="data directory",
 )
 parser.add_argument(
-    "--model",
-    type=str,
-    default="./pretrained/real_model.pth",
-    help="resume from saved model",
-)
-parser.add_argument(
     "--result_dir",
     type=str,
-    default="./results/eval_gt_mask",
+    default="/share_chairilg/data/REAL275/dpt_output/speckle_noise",
     help="result directory",
 )
 parser.add_argument("--gpu", type=str, default="1", help="GPU to use")
-
-parser.add_argument("--n_cat", type=int, default=6, help="number of object categories")
-parser.add_argument(
-    "--nv_prior", type=int, default=1024, help="number of vertices in shape priors"
-)
-parser.add_argument(
-    "--n_pts", type=int, default=1024, help="number of foreground points"
-)
-parser.add_argument("--img_size", type=int, default=192, help="cropped image size")
-parser.add_argument(
-    "--num_structure_points",
-    type=int,
-    default=256,
-    help="number of key-points used for pose estimation",
-)
 
 opt = parser.parse_args()
 
@@ -80,14 +64,7 @@ K[1, 1] = cam_fy
 K[0, 2] = cam_cx
 K[1, 2] = cam_cy
 
-result_dir = opt.result_dir
-result_img_dir = os.path.join(result_dir, "images")
-if not os.path.exists(result_dir):
-    os.makedirs(result_dir)
-    os.makedirs(result_img_dir)
-
-dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
-save_dpt_dir = "/share_chairilg/data/REAL275/dpt_output/gt_detection"
+save_dpt_dir = opt.result_dir
 
 # path for shape & scale prior
 mean_shapes = np.load("assets/mean_points_emb.npy")
@@ -114,9 +91,6 @@ normal_norm_color = transforms.Compose(
     ]
 )
 
-
-# you may need to install timm for the DPT (we use 0.4.12)
-
 # Surface normal estimation model: expects input images 384x384 normalized [0,1]
 model_normal = torch.hub.load(
     "alexsax/omnidata_models", "surface_normal_dpt_hybrid_384"
@@ -124,6 +98,8 @@ model_normal = torch.hub.load(
 
 # Depth estimation model: expects input images 384x384 normalized [-1,1]
 model_depth = torch.hub.load("alexsax/omnidata_models", "depth_dpt_hybrid_384")
+
+from PIL import Image
 
 
 def detect():
@@ -134,11 +110,14 @@ def detect():
     ]
 
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
-        
-        img_path = os.path.join(opt.data_dir, path)
-        raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
+        tmp_path = path.split("/")[1:]
+        tmp_path = "/".join(tmp_path)
+        tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
+
+        raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
         raw_rgb = raw_rgb[:, :, ::-1]
 
+        img_path = os.path.join(opt.data_dir, path)
         # load mask-rcnn detection results
         img_path_parsing = img_path.split("/")
 
@@ -152,10 +131,9 @@ def detect():
         with open(mrcnn_path, "rb") as f:
             mrcnn_result = cPickle.load(f)
 
-        with open(img_path + "_label.pkl", "rb") as f:
-            gts = cPickle.load(f)
-
         if opt.use_gt:
+            with open(img_path + "_label.pkl", "rb") as f:
+                gts = cPickle.load(f)
             # Read the gt detection
             mrcnn_result["rois"] = gts["bboxes"]
             mrcnn_result["class_ids"] = gts["class_ids"]
@@ -173,22 +151,23 @@ def detect():
 
         num_insts = len(mrcnn_result["class_ids"])
         # load dpt depth predictions
-        if num_insts != 0:
-            pred_depth_path = os.path.join(dpt_dir, path + "_depth.pkl")
-
-            if not os.path.exists(pred_depth_path):
-                print(f"File {pred_depth_path} does not exist")
-                continue
-            with open(pred_depth_path, "rb") as f:
-                # [num_insts, 192,192]
-                pred_depth_all = cPickle.load(f)
-            pred_normal_path = os.path.join(dpt_dir, path + "_normal.pkl")
-            with open(pred_normal_path, "rb") as f:
-                # [num_insts, 192,192,3]
-                pred_normal_all = cPickle.load(f)
-
         depths = []
         normals = []
+
+        # if num_insts != 0:
+        #     dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
+        #     pred_depth_path = os.path.join(dpt_dir, path + "_depth.pkl")
+
+        #     if not os.path.exists(pred_depth_path):
+        #         print(f"File {pred_depth_path} does not exist")
+        #         continue
+        #     with open(pred_depth_path, "rb") as f:
+        #         # [num_insts, 192,192]
+        #         pred_depth_all = cPickle.load(f)
+        #     pred_normal_path = os.path.join(dpt_dir, path + "_normal.pkl")
+        #     with open(pred_normal_path, "rb") as f:
+        #         # [num_insts, 192,192,3]
+        #         pred_normal_all = cPickle.load(f)
 
         for i in range(num_insts):
             rmin, rmax, cmin, cmax = get_bbox(mrcnn_result["rois"][i])
@@ -235,20 +214,6 @@ def detect():
                 # plt.subplot(2, 2, 4)
                 # plt.imshow(ds_normal.permute(1, 2, 0).detach().cpu().numpy())
                 # plt.show()
-
-                # print(pred_depth_all[i].min(), pred_depth_all[i].max())
-                # print(ds_depth.min(), ds_depth.max())
-
-                # print(
-                #     torch.allclose(
-                #         torch.from_numpy(pred_normal_all[i]).cuda(),
-                #         ds_normal.permute(1, 2, 0),
-                #         atol=1e-2,
-                #     ),
-                #     torch.allclose(
-                #         torch.from_numpy(pred_depth_all[i]).cuda(), ds_depth, atol=1e-4
-                #     ),
-                # )
 
         # [num_insts, 192,192]
         packed_depth = np.stack(depths, axis=0)

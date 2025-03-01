@@ -1,3 +1,1 @@
-# python generate_sketches.py --use_gt 1
-python evaluate.py --use_gt 1 --result_dir ./results/real_dpt
-python eval_results.py
+python generate_sketches.py --corruption gaussian_blur --result_dir /share_chairilg/data/REAL275/dpt_output/gaussian_blur

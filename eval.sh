@@ -1,3 +1,4 @@
-# python evaluate.py --data real_test --model ./pretrained/real_model.pth --result_dir ./results/eval_real
-python eval_results.py 
-# python evaluate.py --data val --model ./pretrained/camera_model.pth --result_dir ./results/eval_camera
+conda activate dmsr
+python evaluate.py --corruption speckle_noise --result_dir ./results/speckle_noise
+python evaluate.py --corruption gaussian_blur --result_dir ./results/gaussian_blur
+python evaluate.py --corruption gaussian_noise --result_dir ./results/gaussian_noise
