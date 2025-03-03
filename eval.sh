@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 source /home/xizh00005/.bashrc
 conda activate oldnet
 ROOT='/home/xizh00005/project/DMSR/'

@@ -161,8 +161,7 @@ def detect():
     img_count = 0
     t_start = time.time()
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
-        if img_id >=1:
-            break
+
         img_path = os.path.join(opt.data_dir, path)
 
         if len(opt.corruption) > 0:
