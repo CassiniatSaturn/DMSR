@@ -26,6 +26,10 @@ parser = argparse.ArgumentParser()
 
 
 parser.add_argument(
+    "--corrupt_roi", type=int, default=0, help="use noisy detection results if 1"
+)
+
+parser.add_argument(
     "--corruption",
     type=str,
     default="",
@@ -105,12 +109,12 @@ def detect():
     if opt.use_gt:
         dpt_dir = "/share_chairilg/data/REAL275/dpt_output/gt_detection"
     else:
-        if len(opt.corruption) == 0:
-            dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
-        else:
+        if len(opt.corruption) > 0:
             dpt_dir = "/share_chairilg/data/REAL275/dpt_output/{}".format(
                 opt.corruption
             )
+        else:
+            dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
 
     # path for shape & scale prior
     mean_shapes = np.load("assets/mean_points_emb.npy")
@@ -159,11 +163,13 @@ def detect():
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
         img_path = os.path.join(opt.data_dir, path)
 
-        if len(opt.corruption) != 0:
+        if len(opt.corruption) > 0:
             tmp_path = path.split("/")[1:]
             tmp_path = "/".join(tmp_path)
             tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
             raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
+            print(f"load corrupted img from {tmp_path}")
+
         else:
             raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
 
@@ -172,6 +178,15 @@ def detect():
 
         # load mask-rcnn detection results
         img_path_parsing = img_path.split("/")
+
+        if opt.corrupt_roi:
+            detection_file = os.path.join(
+                f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
+                "results_{}_{}_{}.pkl".format(
+                    opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
+                ),
+            )
+            print(f"load corrupted detection from {detection_file}")
 
         mrcnn_path = os.path.join(
             f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",

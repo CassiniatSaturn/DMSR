@@ -352,4 +352,4 @@ def write_eval_logs(
 
 
 if __name__ == "__main__":
-    real275_evaluator("results/eval_camera")
+    real275_evaluator("/home/xizh00005/remote/project/DMSR/results/motion_blur")

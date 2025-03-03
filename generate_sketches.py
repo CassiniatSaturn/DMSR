@@ -28,7 +28,7 @@ parser.add_argument(
 parser.add_argument(
     "--corruption",
     type=str,
-    default="speckle_noise",
+    default="gaussian_noise",
     help="['gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur', 'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog', 'brightness', 'contrast', 'elastic_transform', 'pixelate', 'jpeg_compression', 'speckle_noise', 'gaussian_blur', 'spatter', 'saturate']",
 )
 parser.add_argument("--data", type=str, default="real_test", help="val, real_test")
@@ -41,7 +41,7 @@ parser.add_argument(
 parser.add_argument(
     "--result_dir",
     type=str,
-    default="/share_chairilg/data/REAL275/dpt_output/speckle_noise",
+    default="/share_chairilg/data/REAL275/dpt_output/gaussian_noise",
     help="result directory",
 )
 parser.add_argument("--gpu", type=str, default="1", help="GPU to use")
