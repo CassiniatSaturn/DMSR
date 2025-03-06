@@ -1,7 +1,5 @@
 import os
-import numpy
 import cv2
-import time
 import glob
 import argparse
 import numpy as np
@@ -12,12 +10,9 @@ import matplotlib.pyplot as plt
 
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
-from lib.sgpa import SPGANet
-from lib.align import ransacPnP_LM
-from lib.utils import load_depth, get_bbox, draw_detections, compute_mAP
+from lib.utils import get_bbox
 
 print(torch.cuda.is_available())
 parser = argparse.ArgumentParser()
