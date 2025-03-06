@@ -191,7 +191,7 @@ def detect():
                     opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
                 ),
             )
-            print(f"load corrupted detection from {mrcnn_result}")
+            print(f"load corrupted detection from {mrcnn_path}")
         else:
             mrcnn_path = os.path.join(
                 f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
