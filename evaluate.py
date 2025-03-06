@@ -109,7 +109,11 @@ def detect():
     if opt.use_gt:
         dpt_dir = "/share_chairilg/data/REAL275/dpt_output/gt_detection"
     else:
-        if len(opt.corruption) > 0:
+        if opt.corrupt_roi:
+            dpt_dir = "/share_chairilg/data/REAL275/dpt_output/ND{}".format(
+                opt.corruption
+            )
+        elif len(opt.corruption) > 0:
             dpt_dir = "/share_chairilg/data/REAL275/dpt_output/{}".format(
                 opt.corruption
             )
