@@ -122,11 +122,18 @@ def detect():
         img_path_parsing = img_path.split("/")
 
         mrcnn_path = os.path.join(
-            f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
-            "results_{}_{}_{}.pkl".format(
-                opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
-            ),
-        )
+                f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
+                "results_{}_{}_{}.pkl".format(
+                    opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
+                ),
+            )
+
+        # mrcnn_path = os.path.join(
+        #     f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
+        #     "results_{}_{}_{}.pkl".format(
+        #         opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
+        #     ),
+        # )
 
         with open(mrcnn_path, "rb") as f:
             mrcnn_result = cPickle.load(f)

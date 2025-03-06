@@ -181,20 +181,20 @@ def detect():
         img_path_parsing = img_path.split("/")
 
         if opt.corrupt_roi:
-            detection_file = os.path.join(
+            mrcnn_result = os.path.join(
                 f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
                 "results_{}_{}_{}.pkl".format(
                     opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
                 ),
             )
-            print(f"load corrupted detection from {detection_file}")
-
-        mrcnn_path = os.path.join(
-            f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
-            "results_{}_{}_{}.pkl".format(
-                opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
-            ),
-        )
+            print(f"load corrupted detection from {mrcnn_result}")
+        else:
+            mrcnn_path = os.path.join(
+                f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
+                "results_{}_{}_{}.pkl".format(
+                    opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
+                ),
+            )
 
         with open(mrcnn_path, "rb") as f:
             mrcnn_result = cPickle.load(f)
