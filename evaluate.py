@@ -185,7 +185,7 @@ def detect():
         img_path_parsing = img_path.split("/")
 
         if opt.corrupt_roi:
-            mrcnn_result = os.path.join(
+            mrcnn_path = os.path.join(
                 f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
                 "results_{}_{}_{}.pkl".format(
                     opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
