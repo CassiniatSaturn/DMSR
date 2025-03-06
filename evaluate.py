@@ -110,7 +110,7 @@ def detect():
         dpt_dir = "/share_chairilg/data/REAL275/dpt_output/gt_detection"
     else:
         if opt.corrupt_roi:
-            dpt_dir = "/share_chairilg/data/REAL275/dpt_output/ND{}".format(
+            dpt_dir = "/share_chairilg/data/REAL275/dpt_output/ND/{}".format(
                 opt.corruption
             )
         elif len(opt.corruption) > 0:
@@ -173,7 +173,7 @@ def detect():
             tmp_path = "/".join(tmp_path)
             tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
             raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
-            print(f"load corrupted img from {tmp_path}")
+            # print(f"load corrupted img from {tmp_path}")
 
         else:
             raw_rgb = cv2.imread(img_path + "_color.png")[:, :, :3]
@@ -191,7 +191,7 @@ def detect():
                     opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
                 ),
             )
-            print(f"load corrupted detection from {mrcnn_path}")
+            # print(f"load corrupted detection from {mrcnn_path}")
         else:
             mrcnn_path = os.path.join(
                 f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
