@@ -829,3 +829,99 @@ def draw_detections(img, out_dir, data_name, img_id, intrinsics, pred_sRT, pred_
     cv2.imwrite(out_path, img)
     #cv2.imshow('vis', img)
     #cv2.waitKey(0)
+
+from PIL import Image
+def draw_bboxes_ori(img, img_pts, color):
+    img_pts = np.int32(img_pts).reshape(-1, 2)
+    # draw ground layer in darker color
+    color_ground = (int(color[0] * 0.3), int(color[1] * 0.3), int(color[2] * 0.3))
+    for i, j in zip([4, 5, 6, 7], [5, 7, 4, 6]):
+        img = cv2.line(img, tuple(img_pts[i]), tuple(img_pts[j]), color_ground, 2)
+    # draw pillars in minor darker color
+    color_pillar = (int(color[0] * 0.6), int(color[1] * 0.6), int(color[2] * 0.6))
+    for i, j in zip(range(4), range(4, 8)):
+        img = cv2.line(img, tuple(img_pts[i]), tuple(img_pts[j]), color_pillar, 2)
+    # draw top layer in original color
+    for i, j in zip([0, 1, 2, 3], [1, 3, 0, 2]):
+        img = cv2.line(img, tuple(img_pts[i]), tuple(img_pts[j]), color, 2)
+
+    return img
+
+def draw_detections_ori(
+    img,
+    out_dir,
+    data_name,
+    img_id,
+    intrinsics,
+    pred_sRT,
+    pred_size,
+    pred_class_ids,
+    gt_sRT,
+    gt_size,
+    gt_class_ids,
+    nocs_sRT=None,
+    nocs_size=None,
+    nocs_class_ids=None,
+    draw_gt=True,
+    draw_nocs=True,
+):
+    """Visualize pose predictions."""
+    out_path = os.path.join(out_dir, "{}_{}_pred.png".format(data_name, img_id))
+    gt_out_path = os.path.join(out_dir, "gt","{}_{}_gt.png".format(data_name, img_id))
+    pred_out_path = os.path.join(out_dir,"pred", "{}_{}_pred.png".format(data_name, img_id))
+
+    os.makedirs(os.path.join(out_dir, "gt"), exist_ok=True)
+    os.makedirs(os.path.join(out_dir, "pred"), exist_ok=True)
+
+    # draw nocs results - RED color
+    # if draw_nocs:
+    #     for i in range(nocs_sRT.shape[0]):
+    #         if nocs_class_ids[i] in [1, 2, 4]:
+    #             sRT = align_rotation(nocs_sRT[i, :, :])
+    #         else:
+    #             sRT = nocs_sRT[i, :, :]
+    #         bbox_3d = get_3d_bbox(nocs_size[i, :], 0)
+    #         transformed_bbox_3d = transform_coordinates_3d(bbox_3d, sRT)
+    #         projected_bbox = calculate_2d_projections(transformed_bbox_3d, intrinsics)
+    #         img = draw_bboxes(img, projected_bbox, (255, 0, 0))
+    # draw ground truth
+    # color_list = [
+    #     (255, 158, 137),
+    #     (235, 235, 235),
+    #     (198, 219, 255),
+    #     (219, 197, 212),
+    #     (183, 128, 212),
+    #     (248, 225, 172),
+    # ]
+    if draw_gt:
+        # draw objects in different colors based on class id
+        tmp_img = img.copy()
+        for i in range(gt_sRT.shape[0]):
+            if gt_class_ids[i] in [1, 2, 4]:
+                sRT = align_rotation(gt_sRT[i, :, :])
+            else:
+                sRT = gt_sRT[i, :, :]
+            bbox_3d = get_3d_bbox(gt_size[i, :], 0)
+            transformed_bbox_3d = transform_coordinates_3d(bbox_3d, sRT)
+            projected_bbox = calculate_2d_projections(transformed_bbox_3d, intrinsics)
+
+            img_gt = draw_bboxes_ori(
+                tmp_img, projected_bbox, (255,0,0)
+            )
+    # draw prediction
+    tmp_img = img.copy()
+    for i in range(pred_sRT.shape[0]):
+        if pred_class_ids[i] in [1, 2, 4]:
+            sRT = align_rotation(pred_sRT[i, :, :])
+        else:
+            sRT = pred_sRT[i, :, :]
+        bbox_3d = get_3d_bbox(pred_size[i, :], 0)
+        transformed_bbox_3d = transform_coordinates_3d(bbox_3d, sRT)
+        projected_bbox = calculate_2d_projections(transformed_bbox_3d, intrinsics)
+        img_pred = draw_bboxes_ori(
+            tmp_img, projected_bbox, (0, 255, 0)
+        )
+    
+    # Image.fromarray(img_pred).save(pred_out_path)
+    cv2.imwrite(out_path, img_pred)
+

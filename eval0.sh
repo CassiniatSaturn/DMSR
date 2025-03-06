@@ -4,9 +4,7 @@ conda activate oldnet
 ROOT='/home/xizh00005/project/DMSR/'
 cd $ROOT
 
-
-python evaluate.py --corrupt_roi 1 --corruption fog --result_dir ./results/NDNP/fog
-
+python evaluate.py --corrupt_roi 0 --corruption "" --result_dir ./results/visualize_predicion
 
 # python evaluate.py --corrupt_roi 0 --corruption defocus_blur --result_dir ./results/NFNP/defocus_blur
 # python evaluate.py --corrupt_roi 0 --corruption frost --result_dir ./results/NFNP/frost

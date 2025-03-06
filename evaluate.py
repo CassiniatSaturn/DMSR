@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 from lib.sgpa import SPGANet
 from lib.align import ransacPnP_LM
-from lib.utils import load_depth, get_bbox, draw_detections, compute_mAP
+from lib.utils import load_depth, get_bbox, draw_detections_ori, compute_mAP
 
 from imagecorruptions import corrupt, get_corruption_names
 from PIL import Image
@@ -369,20 +369,21 @@ def detect():
             cPickle.dump(result, f)
 
         # draw estimation results on images
-        # draw_detections(
-        #     raw_rgb[:, :, ::-1].copy(),
-        #     result_img_dir,
-        #     "images",
-        #     img_id,
-        #     K,
-        #     result["pred_RTs"],
-        #     result["pred_scales"],
-        #     result["pred_class_ids"],
-        #     result["gt_RTs"],
-        #     result["gt_scales"],
-        #     result["gt_class_ids"],
-        #     draw_gt=True,
-        # )
+        draw_detections_ori(
+            raw_rgb[:, :, ::-1].copy(),
+            result_img_dir,
+            image_short_path,
+            "",
+            K,
+            result["pred_RTs"],
+            result["pred_scales"],
+            result["pred_class_ids"],
+            result["gt_RTs"],
+            result["gt_scales"],
+            result["gt_class_ids"],
+            draw_gt=True,
+        )
+
 
     # write statistics
     fw = open("{0}/eval_logs.txt".format(result_dir), "w")
