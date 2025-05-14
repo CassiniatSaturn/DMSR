@@ -18,25 +18,30 @@ print(torch.cuda.is_available())
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "--use_gt", type=int, default=0, help="use GT mask as detection results"
+    "--dataset",
+    type=str,
+    default="HouseCat6D",
+    help="HouseCat6D, Real",
 )
+
+
+parser.add_argument(
+    "--split",
+    type=str,
+    default="train",
+    help="train, test",
+)
+
 parser.add_argument(
     "--corruption",
     type=str,
-    default="gaussian_noise",
+    default="",
     help="['gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur', 'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog', 'brightness', 'contrast', 'elastic_transform', 'pixelate', 'jpeg_compression', 'speckle_noise', 'gaussian_blur', 'spatter', 'saturate']",
-)
-parser.add_argument("--data", type=str, default="real_test", help="val, real_test")
-parser.add_argument(
-    "--data_dir",
-    type=str,
-    default="/share_chairilg/data/REAL275",
-    help="data directory",
 )
 parser.add_argument(
     "--result_dir",
     type=str,
-    default="/share_chairilg/data/REAL275/dpt_output/gaussian_noise",
+    default="/share_chairilg/data/HouseCat6D/dpt_output/train",
     help="result directory",
 )
 parser.add_argument("--gpu", type=str, default="1", help="GPU to use")
@@ -45,30 +50,41 @@ opt = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = opt.gpu
 
-assert opt.data in ["val", "real_test"]
-if opt.data == "val":
-    cam_fx, cam_fy, cam_cx, cam_cy = 577.5, 577.5, 319.5, 239.5
-    file_path = "CAMERA/val_list.txt"
-else:
-    cam_fx, cam_fy, cam_cx, cam_cy = 591.0125, 590.16775, 322.525, 244.11084
-    file_path = "Real/test_list.txt"
+if opt.dataset == "HouseCat6D":
+    opt.data_dir = "/share_chairilg/data/HouseCat6D"
+    opt.corruption = "gaussian_noise"
+    img_list=[]
+    if opt.split == "train":
+        train_scenes_rgb = glob.glob(os.path.join(opt.data_dir,'scene*','rgb'))
+        train_scenes_rgb.sort()
+        detection_dir = "/share_chairilg/data/HouseCat6D/{scene}/labels/{img_id}_label.pkl" # use GT detection
+    else:
+        train_scenes_rgb = glob.glob(os.path.join(opt.data_dir,"test",'test_scene*','rgb'))
+        train_scenes_rgb.sort()
+        detection_dir = "/share_chairilg/data/HouseCat6D/groundedsam_segmentation"
 
-K = np.eye(3)
-K[0, 0] = cam_fx
-K[1, 1] = cam_fy
-K[0, 2] = cam_cx
-K[1, 2] = cam_cy
+
+    for scene in train_scenes_rgb:
+        img_paths = glob.glob(os.path.join(scene, '*.png'))
+        img_paths.sort()
+        img_paths = img_paths[:-1]
+        for img_path in img_paths:
+            img_list.append(img_path)
+
+    print(f"Found {len(img_list)} images in {opt.dataset}")
+
+else:
+    opt.data_dir = "/share_chairilg/data/REAL275"
+    file_path = "Real/test_list.txt"
+    img_list = [
+        os.path.join(file_path.split("/")[0], line.rstrip("\n"))
+        for line in open(os.path.join(opt.data_dir, file_path))
+    ]
+
+    print(f"Found {len(img_list)} images in {opt.dataset}")
+
 
 save_dpt_dir = opt.result_dir
-
-# path for shape & scale prior
-mean_shapes = np.load("assets/mean_points_emb.npy")
-with open("assets/mean_scale.pkl", "rb") as f:
-    mean_scale = cPickle.load(f)
-
-xmap = np.array([[i for i in range(640)] for j in range(480)])
-ymap = np.array([[j for i in range(640)] for j in range(480)])
-norm_scale = 1000.0
 
 # Depth estimation model: expects input images 384x384 normalized [-1,1]
 # image = (image - mean) / std
@@ -94,92 +110,80 @@ model_normal = torch.hub.load(
 # Depth estimation model: expects input images 384x384 normalized [-1,1]
 model_depth = torch.hub.load("alexsax/omnidata_models", "depth_dpt_hybrid_384")
 
+
+model_depth.cuda()
+model_depth.eval()
+model_normal.cuda()
+model_normal.eval()
+
 from PIL import Image
 
 
 def detect():
     # get test data list
-    img_list = [
-        os.path.join(file_path.split("/")[0], line.rstrip("\n"))
-        for line in open(os.path.join(opt.data_dir, file_path))
-    ]
-
     for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
-        tmp_path = path.split("/")[1:]
-        tmp_path = "/".join(tmp_path)
-        tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
+        if opt.dataset == "HouseCat6D":
+            raw_rgb = cv2.imread(path)[:, :, :3]
+            img_path_parsing = path.split("/")
+            scene_name = img_path_parsing[-3]
+            img_name = img_path_parsing[-1][:-4] # remove .png
+            if opt.split == "train":
+                detection_file = detection_dir.format(scene=scene_name,img_id=img_name)
+            else:
+                detection_file = os.path.join(
+                    detection_dir,
+                    "results_{}_{}.pkl".format(scene_name, img_name),
+                )
 
-        raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
-        raw_rgb = raw_rgb[:, :, ::-1]
+            pred_depth_path = os.path.join(save_dpt_dir, scene_name, "{}_depth.pkl".format(img_name))
+            pred_normal_path = os.path.join(save_dpt_dir,scene_name, "{}_normal.pkl".format(img_name))
 
-        img_path = os.path.join(opt.data_dir, path)
-        # load mask-rcnn detection results
-        img_path_parsing = img_path.split("/")
+            os.makedirs(
+                os.path.join(save_dpt_dir,scene_name), exist_ok=True
+            )
+        else:
+            tmp_path = path.split("/")[1:]
+            tmp_path = "/".join(tmp_path)
+            tmp_path = os.path.join(opt.data_dir, "NoiseReal", opt.corruption, tmp_path)
 
-        mrcnn_path = os.path.join(
-                f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
-                "results_{}_{}_{}.pkl".format(
-                    opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
-                ),
+            raw_rgb = cv2.imread(tmp_path + "_color.png")[:, :, :3]
+            raw_rgb = raw_rgb[:, :, ::-1]
+
+            img_path = os.path.join(opt.data_dir, path)
+            # load mask-rcnn detection results
+            img_path_parsing = img_path.split("/")
+
+            detection_file = os.path.join(
+                    f"/share_chairilg/data/REAL275/NoiseReal/{opt.corruption}/detections",
+                    "results_{}_{}_{}.pkl".format(
+                        opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
+                    ),
+                )
+            pred_depth_path = os.path.join(save_dpt_dir, path + "_depth.pkl")
+            pred_normal_path = os.path.join(save_dpt_dir, path + "_normal.pkl")
+
+            os.makedirs(
+                os.path.join(save_dpt_dir, "/".join(path.split("/")[:-1])), exist_ok=True
             )
 
-        # mrcnn_path = os.path.join(
-        #     f"/share_chairilg/data/REAL275/deformnet_eval/mrcnn_results/{opt.data}",
-        #     "results_{}_{}_{}.pkl".format(
-        #         opt.data.split("_")[-1], img_path_parsing[-2], img_path_parsing[-1]
-        #     ),
-        # )
-
-        with open(mrcnn_path, "rb") as f:
+        # load mask-rcnn detection results
+        with open(detection_file, "rb") as f:
             mrcnn_result = cPickle.load(f)
 
-        if opt.use_gt:
-            with open(img_path + "_label.pkl", "rb") as f:
-                gts = cPickle.load(f)
-            # Read the gt detection
-            mrcnn_result["rois"] = gts["bboxes"]
-            mrcnn_result["class_ids"] = gts["class_ids"]
-
-            mask_packed = cv2.imread(img_path + "_mask.png")[..., 0]
-
-            gt_masks = np.stack(
-                [
-                    (mask_packed == (i + 1)).astype(bool)
-                    for i in range(len(gts["class_ids"]))
-                ],
-                axis=0,
-            )
-            mrcnn_result["masks"] = gt_masks.transpose(1, 2, 0)
-
         num_insts = len(mrcnn_result["class_ids"])
+
+        # Handle the different dict keys in GT detection dict
+        if "rois" not in mrcnn_result:
+            mrcnn_result["rois"] = mrcnn_result["bboxes"]
+            
         # load dpt depth predictions
         depths = []
         normals = []
 
-        # if num_insts != 0:
-        #     dpt_dir = "/share_chairilg/data/REAL275/dpt_output"
-        #     pred_depth_path = os.path.join(dpt_dir, path + "_depth.pkl")
-
-        #     if not os.path.exists(pred_depth_path):
-        #         print(f"File {pred_depth_path} does not exist")
-        #         continue
-        #     with open(pred_depth_path, "rb") as f:
-        #         # [num_insts, 192,192]
-        #         pred_depth_all = cPickle.load(f)
-        #     pred_normal_path = os.path.join(dpt_dir, path + "_normal.pkl")
-        #     with open(pred_normal_path, "rb") as f:
-        #         # [num_insts, 192,192,3]
-        #         pred_normal_all = cPickle.load(f)
-
         for i in range(num_insts):
-            rmin, rmax, cmin, cmax = get_bbox(mrcnn_result["rois"][i])
+            rmin, rmax, cmin, cmax = get_bbox(mrcnn_result["rois"][i], raw_rgb.shape[0], raw_rgb.shape[1])
             rgb = raw_rgb[rmin:rmax, cmin:cmax, :]
             rgb = cv2.resize(rgb, (384, 384), interpolation=cv2.INTER_LINEAR)
-
-            model_normal.cuda()
-            model_depth.cuda()
-            model_normal.eval()
-            model_depth.eval()
 
             with torch.no_grad():
                 rgb_d = depth_norm_color(rgb).unsqueeze(0).cuda()
@@ -208,11 +212,11 @@ def detect():
                 # ds_normal = ds_normal * 2 - 1
 
                 # plt.subplot(2, 2, 1)
-                # plt.imshow(pred_depth_all[i])
+                # plt.imshow(depths[i])
                 # plt.subplot(2, 2, 2)
                 # plt.imshow(ds_depth.detach().cpu().numpy())
                 # plt.subplot(2, 2, 3)
-                # plt.imshow(pred_normal_all[i])
+                # plt.imshow(normals[i])
                 # plt.subplot(2, 2, 4)
                 # plt.imshow(ds_normal.permute(1, 2, 0).detach().cpu().numpy())
                 # plt.show()
@@ -221,13 +225,6 @@ def detect():
         packed_depth = np.stack(depths, axis=0)
         # [num_insts, 192,192,3]
         packed_normal = np.stack(normals, axis=0)
-
-        pred_depth_path = os.path.join(save_dpt_dir, path + "_depth.pkl")
-        pred_normal_path = os.path.join(save_dpt_dir, path + "_normal.pkl")
-
-        os.makedirs(
-            os.path.join(save_dpt_dir, "/".join(path.split("/")[:-1])), exist_ok=True
-        )
 
         with open(pred_depth_path, "wb") as f:
             # [num_insts, 192,192]

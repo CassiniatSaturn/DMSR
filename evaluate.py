@@ -26,13 +26,13 @@ parser = argparse.ArgumentParser()
 
 
 parser.add_argument(
-    "--corrupt_roi", type=int, default=0, help="use noisy detection results if 1"
+    "--corrupt_roi", type=int, default=1, help="use noisy detection results if 1"
 )
 
 parser.add_argument(
     "--corruption",
     type=str,
-    default="",
+    default="gaussian_noise",
     help="no corrpution:'', else: ['gaussian_noise', 'shot_noise', 'impulse_noise', 'defocus_blur', 'glass_blur', 'motion_blur', 'zoom_blur', 'snow', 'frost', 'fog', 'brightness', 'contrast', 'elastic_transform', 'pixelate', 'jpeg_compression', 'speckle_noise', 'gaussian_blur', 'spatter', 'saturate']",
 )
 
@@ -369,20 +369,21 @@ def detect():
             cPickle.dump(result, f)
 
         # draw estimation results on images
-        draw_detections_ori(
-            raw_rgb[:, :, ::-1].copy(),
-            result_img_dir,
-            image_short_path,
-            "",
-            K,
-            result["pred_RTs"],
-            result["pred_scales"],
-            result["pred_class_ids"],
-            result["gt_RTs"],
-            result["gt_scales"],
-            result["gt_class_ids"],
-            draw_gt=True,
-        )
+        # draw_detections_ori(
+        #     raw_rgb[:, :, ::-1].copy(),
+        #     result_img_dir,
+        #     "DMSR",#image_short_path,
+        #     "",
+        #     K,
+        #     result["pred_RTs"],
+        #     result["pred_scales"],
+        #     result["pred_class_ids"],
+        #     result["gt_RTs"],
+        #     result["gt_scales"],
+        #     result["gt_class_ids"],
+        #     draw_gt=True,
+        # )
+
 
 
     # write statistics

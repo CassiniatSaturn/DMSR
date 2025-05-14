@@ -33,7 +33,7 @@ def plot_mAP(
     ]
     styles = ["-", "-", "-", "-", "-", "-", "--", ":"]
 
-    fig, (ax_iou, ax_degree, ax_shift) = plt.subplots(1, 3, figsize=(8, 3.5))
+    fig, (ax_iou, ax_degree, ax_shift) = plt.subplots(1, 3, figsize=(30, 10))
     # IoU subplot
     ax_iou.set_title("3D IoU", fontsize=10)
     ax_iou.set_ylabel("Average Precision")
@@ -85,7 +85,7 @@ def plot_mAP(
     ax_shift.legend(loc="lower right", fontsize="small")
     plt.tight_layout()
     # plt.show()
-    plt.savefig(os.path.join(out_dir, f"{metric}_mAP.png"))
+    plt.savefig(os.path.join(out_dir, f"{metric}_mAP2.png"))
     plt.close(fig)
     return
 
@@ -118,18 +118,7 @@ def real275_evaluator(result_dir, data_source="real_test"):
         else:
             assert False
 
-    la_iou_aps, la_pose_aps = compute_degree_cm_mAP(
-        pred_results,
-        result_dir,
-        degree_thres_list,
-        shift_thres_list,
-        iou_thres_list,
-        iou_pose_thres=0.1,
-        use_matches_for_pose=True,
-    )
-    write_eval_logs(result_dir, la_iou_aps, la_pose_aps, metric="LaPose")
-
-    # iou_aps, pose_aps, iou_acc, pose_acc = compute_mAP(
+    # la_iou_aps, la_pose_aps = compute_degree_cm_mAP(
     #     pred_results,
     #     result_dir,
     #     degree_thres_list,
@@ -138,15 +127,7 @@ def real275_evaluator(result_dir, data_source="real_test"):
     #     iou_pose_thres=0.1,
     #     use_matches_for_pose=True,
     # )
-
-    # write_eval_logs(
-    #     result_dir,
-    #     iou_aps,
-    #     pose_aps,
-    #     iou_acc=iou_acc,
-    #     pose_acc=pose_acc,
-    #     metric="Real275",
-    # )
+    # write_eval_logs(result_dir, la_iou_aps, la_pose_aps, metric="LaPose")
 
     degree_thresholds = list(range(0, 61, 1))
     shift_thresholds = [i for i in range(51)]
@@ -172,6 +153,7 @@ def real275_evaluator(result_dir, data_source="real_test"):
         iou_3d_thresholds=iou_3d_thresholds,
         iou_pose_thres=0.1,
         use_matches_for_pose=True,
+        plot_figure=True
     )
 
     write_eval_logs(
@@ -184,37 +166,35 @@ def real275_evaluator(result_dir, data_source="real_test"):
         metric="Normalized",
     )
 
-    # plot
     # plot_mAP(
-    #     iou_aps,
-    #     pose_aps,
+    #     norm_iou_aps,
+    #     norm_pose_aps,
     #     result_dir,
     #     iou_thres_list,
     #     degree_thres_list,
     #     shift_thres_list,
-    #     metric="Real275",
+    #     metric="Normalized",
     # )
 
-    plot_mAP(
-        la_iou_aps,
-        la_pose_aps,
-        result_dir,
-        iou_thres_list,
-        degree_thres_list,
-        shift_thres_list,
-        metric="LaPose",
-    )
+    # iou_aps, pose_aps, iou_acc, pose_acc = compute_mAP(
+    #     pred_results,
+    #     result_dir,
+    #     degree_thres_list,
+    #     shift_thres_list,
+    #     iou_thres_list,
+    #     iou_pose_thres=0.1,
+    #     use_matches_for_pose=True,
+    # )
 
-    plot_mAP(
-        norm_iou_aps,
-        norm_pose_aps,
-        result_dir,
-        iou_thres_list,
-        degree_thres_list,
-        shift_thres_list,
-        metric="Normalized",
-    )
-
+    # write_eval_logs(
+    #     result_dir,
+    #     iou_aps,
+    #     pose_aps,
+    #     iou_acc=iou_acc,
+    #     pose_acc=pose_acc,
+    #     metric="Real275",
+    # )
+  
 
 def write_eval_logs(
     result_dir,
@@ -297,12 +277,10 @@ def write_eval_logs(
         messages.append(
             "10 degree: {:.1f}".format(pose_aps[-1, degree_10_idx, -1] * 100)
         )
+        messages.append("5cm: {:.1f}".format(pose_aps[-1, -1, shift_05_idx] * 100))
         messages.append("10cm: {:.1f}".format(pose_aps[-1, -1, shift_10_idx] * 100))
-        messages.append(
-            "10 degree, 10cm: {:.1f}".format(
-                pose_aps[-1, degree_10_idx, shift_10_idx] * 100
-            )
-        )
+
+       
 
         messages.append(
             "5 degree, 5cm: {:.1f}".format(
@@ -310,8 +288,8 @@ def write_eval_logs(
             )
         )
         messages.append(
-            "10 degree, 5cm: {:.1f}".format(
-                pose_aps[-1, degree_10_idx, shift_05_idx] * 100
+            "5 degree, 10cm: {:.1f}".format(
+                pose_aps[-1, degree_05_idx, shift_10_idx] * 100
             )
         )
         messages.append(
@@ -319,7 +297,12 @@ def write_eval_logs(
                 pose_aps[-1, degree_10_idx, shift_05_idx] * 100
             )
         )
-
+        messages.append(
+            "10 degree, 10cm: {:.1f}".format(
+                pose_aps[-1, degree_10_idx, shift_10_idx] * 100
+            )
+        )
+       
     if metric == "Real275":
         messages.append(f"{metric} Acc:")
         messages.append("3D IoU at 25: {:.1f}".format(iou_acc[-1, iou_25_idx] * 100))
@@ -352,4 +335,4 @@ def write_eval_logs(
 
 
 if __name__ == "__main__":
-    real275_evaluator("/home/xizh00005/remote/project/DMSR/results/motion_blur")
+    real275_evaluator("results/eval_real")

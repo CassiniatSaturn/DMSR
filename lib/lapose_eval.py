@@ -706,9 +706,11 @@ def compute_degree_cm_mAP(
         plt.rc("axes", labelsize=26)
         fig_iou = plt.figure(figsize=(30, 10))
         ax_iou = plt.subplot(131)
+        ax_iou.grid()
         plt.ylabel("AP")
         plt.ylim((0, 1))
-        plt.xlabel("3D IoU thresholds")
+        plt.xlim((0, 1))
+        plt.xlabel("3D NIoU thresholds")
         for cls_id in range(1, num_classes):
             class_name = synset_names[cls_id]
             ax_iou.plot(
@@ -717,7 +719,6 @@ def compute_degree_cm_mAP(
                 label=class_name,
                 linewidth=4,
             )
-
         ax_iou.plot(iou_thres_list[:-1], iou_3d_aps[-1, :-1], label="mean", linewidth=4)
 
     # draw pose AP vs. thresholds
@@ -747,12 +748,13 @@ def compute_degree_cm_mAP(
 
     if plot_figure:
         ax_trans = plt.subplot(132)
-        plt.ylim((0, 1))
+        ax_trans.grid()
 
+        plt.ylim((0, 1))
+        plt.xlim((0, 60))
         plt.xlabel("Rotation/degree")
         for cls_id in range(1, num_classes):
             class_name = synset_names[cls_id]
-            print(class_name)
             ax_trans.plot(
                 degree_thres_list[:-1],
                 pose_aps[cls_id, :-1, -1],
@@ -766,11 +768,12 @@ def compute_degree_cm_mAP(
         pose_dict["aps"] = pose_aps
 
         ax_rot = plt.subplot(133)
+        ax_rot.grid()
         plt.ylim((0, 1))
+        plt.xlim((0, 0.5))
         plt.xlabel("Translation/d")
         for cls_id in range(1, num_classes):
             class_name = synset_names[cls_id]
-            print(class_name)
             ax_rot.plot(
                 [i / 100 for i in shift_thres_list[:-1]],
                 pose_aps[cls_id, -1, :-1],
@@ -784,12 +787,12 @@ def compute_degree_cm_mAP(
             label="mean",
             linewidth=4,
         )
+
         output_path = os.path.join(
             log_dir,
-            prefix
-            + "mAP_{}-{}cm.png".format(shift_thres_list[0], shift_thres_list[-2]),
+            "mAP_{}-{}cm.png".format(shift_thres_list[0], shift_thres_list[-2]),
         )
-        ax_rot.legend(fontsize=22)
+        ax_rot.legend(fontsize=18,loc="lower right")
         fig_iou.savefig(output_path)
         plt.close(fig_iou)
 

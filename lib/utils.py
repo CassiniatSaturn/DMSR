@@ -168,12 +168,10 @@ def load_depth(img_path):
     return depth16
 
 
-def get_bbox(bbox):
+def get_bbox(bbox, img_width=480, img_length=640):
     """ Compute square image crop window. """
     y1, x1, y2, x2 = bbox
-    img_width = 480
-    img_length = 640
-    window_size = (max(y2-y1, x2-x1) // 40 + 1) * 40
+    window_size = (max(y2 - y1, x2 - x1) // 40 + 1) * 40
     window_size = min(window_size, 440)
     center = [(y1 + y2) // 2, (x1 + x2) // 2]
     rmin = center[0] - int(window_size / 2)
@@ -923,5 +921,5 @@ def draw_detections_ori(
         )
     
     # Image.fromarray(img_pred).save(pred_out_path)
-    cv2.imwrite(out_path, img_pred)
+    cv2.imwrite(pred_out_path, img_pred)
 
