@@ -56,17 +56,16 @@ for scene in train_scenes_rgb:
 
 print(len(img_list))
 
-
 for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
     raw_rgb = cv2.imread(path)
     img = cv2.cvtColor(raw_rgb, cv2.COLOR_BGR2RGB)
         
-    img_path = os.path.join(opt.data_dir, path + "_color.png")
-    scene_idx = path.split("/")[1:3]
-    os.makedirs(os.path.join(result_dir, *scene_idx), exist_ok=True)
+    # img_path = os.path.join(opt.data_dir, path + "_color.png")
+    # scene_idx = path.split("/")[1:3]
+    # os.makedirs(os.path.join(result_dir, *scene_idx), exist_ok=True)
 
-    img = Image.open(img_path).convert("RGB")
-    img = np.array(img)
+    # img = Image.open(img_path).convert("RGB")
+    # img = np.array(img)
 
     corrupted_img = corrupt(img, corruption_name=opt.corruption)
     
