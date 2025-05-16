@@ -42,15 +42,15 @@ result_dir = os.path.join(opt.result_dir, opt.corruption)
 
 os.makedirs(result_dir, exist_ok=True)
 
-train_scenes_rgb = glob.glob(os.path.join(opt.data_dir,'test','test_scene*','rgb'))
-train_scenes_rgb.sort()
-train_scenes_rgb = train_scenes_rgb[:-1] 
+# train_scenes_rgb = glob.glob(os.path.join(opt.data_dir,'test','test_scene*','rgb'))
+# train_scenes_rgb.sort()
+
+train_scenes_rgb = ['/share_chairilg/data/HouseCat6D/test/test_scene5/rgb']
 
 img_list = []
 for scene in train_scenes_rgb:
             img_paths = glob.glob(os.path.join(scene, '*.png'))
             img_paths.sort()
-            img_paths = img_paths[:-1] 
             for img_path in img_paths:
                 img_list.append(img_path)
 
@@ -61,12 +61,12 @@ for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
     raw_rgb = cv2.imread(path)
     img = cv2.cvtColor(raw_rgb, cv2.COLOR_BGR2RGB)
         
-#     img_path = os.path.join(opt.data_dir, path + "_color.png")
-#     scene_idx = path.split("/")[1:3]
-#     os.makedirs(os.path.join(result_dir, *scene_idx), exist_ok=True)
+    img_path = os.path.join(opt.data_dir, path + "_color.png")
+    scene_idx = path.split("/")[1:3]
+    os.makedirs(os.path.join(result_dir, *scene_idx), exist_ok=True)
 
-#     img = Image.open(img_path).convert("RGB")
-#     img = np.array(img)
+    img = Image.open(img_path).convert("RGB")
+    img = np.array(img)
 
     corrupted_img = corrupt(img, corruption_name=opt.corruption)
     
