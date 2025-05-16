@@ -4,5 +4,5 @@ conda activate nemo
 ROOT='/home/xizh00005/project/DMSR/'
 cd $ROOT
 
-pip install imagecorruptions
-python generate_noisy_set_h6f.py --corruption defocus_blur
+
+python generate_noisy_set_h6f.py --corruption jpeg_compression
