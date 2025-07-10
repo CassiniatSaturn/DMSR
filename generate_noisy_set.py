@@ -59,5 +59,3 @@ for img_id, path in tqdm(enumerate(img_list), total=len(img_list)):
     path = "/".join(path)
 
     Image.fromarray(img).save(os.path.join(result_dir, path + "_color.png"))
-    if img_id >= 5:
-        break

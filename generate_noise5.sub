@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name=generate_noises         # Job name
+#SBATCH --output=./log/dmsr_%j.out         # Standard output and error log
+#SBATCH --error=./log/dmsr_%j.err          # Separate error log (optional)
+#SBATCH --gres=gpu:h100:1                      # Request 1 GPU
+#SBATCH --ntasks=1                        # Number of tasks (processes)
+#SBATCH --cpus-per-task=32                 # CPU cores per task
+#SBATCH --time=24:00:00                   # Max runtime hh:mm:ss
+
+unset SLURM_EXPORT_ENV
+# Define project directory on the cluster
+PROJECT_DIR=~/project/DMSR
+
+# Build the Apptainer container from the Docker image
+#apptainer build ${PROJECT_DIR}/dmsr.sif docker://xjzhangcv/dmsr:latest
+# Run the Python script inside the container, bind mounting your project directory
+apptainer exec --nv --bind ${PROJECT_DIR}:/project  \
+          --nv --bind /hnvme/workspace/b266be10-storage_tom/:/workspace/tom_storage/ \
+          ${PROJECT_DIR}/dmsr.sif  \
+          python3 ${PROJECT_DIR}/generate_noisy_set.py --corruption jpeg_compression
